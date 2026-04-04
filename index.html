@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MC Bot Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#0a0c10;color:#e2e8f0;font-family:'Sora',sans-serif;min-height:100vh}
+body{padding:1.5rem}
+a{color:inherit;text-decoration:none}
+
+/* Layout */
+.container{max-width:1100px;margin:0 auto}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+@media(max-width:700px){.grid3,.grid4{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+
+/* Cards */
+.card{background:#111318;border:1px solid #1e2330;border-radius:12px;padding:1rem 1.25rem}
+.card-title{font-size:11px;font-weight:500;color:#4a5568;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem}
+.section-head{font-size:13px;font-weight:600;color:#a0aec0;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+
+/* Stats */
+.stat{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#e2e8f0}
+.stat-muted{font-size:13px;color:#4a5568}
+.dim{color:#4a5568;font-size:11px}
+
+/* Status */
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-online{background:#48bb78;animation:pulse-green 2s infinite}
+.dot-offline{background:#e53e3e}
+.dot-connecting{background:#ed8936;animation:pulse-amber 1s infinite}
+@keyframes pulse-green{0%,100%{box-shadow:0 0 0 0 rgba(72,187,120,.4)}50%{box-shadow:0 0 0 5px rgba(72,187,120,0)}}
+@keyframes pulse-amber{0%,100%{box-shadow:0 0 0 0 rgba(237,137,54,.4)}50%{box-shadow:0 0 0 5px rgba(237,137,54,0)}}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;font-size:11px;padding:3px 9px;border-radius:6px;font-weight:500;gap:4px}
+.badge-green{background:#1a2e1a;color:#68d391;border:1px solid #276749}
+.badge-red{background:#2d1515;color:#fc8181;border:1px solid #742a2a}
+.badge-blue{background:#1a2340;color:#76e4f7;border:1px solid #1e3a5f}
+.badge-yellow{background:#2d2a10;color:#f6e05e;border:1px solid #744210}
+.badge-gray{background:#1e2330;color:#a0aec0;border:1px solid #2d3748}
+.badge-orange{background:#2d2010;color:#f6ad55;border:1px solid #744210}
+
+/* Bar */
+.bar-wrap{height:5px;background:#1e2330;border-radius:3px;overflow:hidden;margin-top:6px}
+.bar{height:100%;border-radius:3px;transition:width .4s,background .4s}
+
+/* Radar */
+.radar-wrap{position:relative;width:100%;padding-top:100%;background:#0d1117;border-radius:10px;overflow:hidden}
+.radar-inner{position:absolute;inset:0}
+#radarCanvas{width:100%;height:100%;display:block}
+
+/* Log */
+.log-wrap{height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:5px}
+.log-wrap::-webkit-scrollbar{width:3px}
+.log-wrap::-webkit-scrollbar-thumb{background:#2d3748;border-radius:3px}
+.log-entry{font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:4px 8px;border-radius:6px;background:#0d1117;border-left:2px solid #2d3748;display:flex;gap:6px;align-items:flex-start;word-break:break-all}
+.log-entry.chat{border-left-color:#63b3ed}
+.log-entry.warn{border-left-color:#f6ad55}
+.log-entry.err{border-left-color:#fc8181}
+.log-entry.info{border-left-color:#68d391}
+.log-entry.cmd{border-left-color:#b794f4}
+.log-time{color:#4a5568;flex-shrink:0;font-size:10px;margin-top:1px}
+
+/* Action feed */
+.action-feed{height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.action-item{font-size:12px;display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #1a1e2a}
+.action-icon{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+
+/* Coords */
+.coords{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;letter-spacing:.04em;margin-bottom:12px}
+.coord-x{color:#fc8181}.coord-y{color:#68d391}.coord-z{color:#76e4f7}
+.coord-sep{color:#2d3748;margin:0 8px}
+
+/* Controls */
+.ctrl-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.btn{background:#1e2330;border:1px solid #2d3748;border-radius:8px;color:#e2e8f0;padding:7px 14px;font-size:12px;font-family:'Sora',sans-serif;cursor:pointer;transition:background .15s,border-color .15s}
+.btn:hover{background:#2d3748}
+.btn.danger{border-color:#742a2a;color:#fc8181}
+.btn.danger:hover{background:#2d1515}
+.btn.success{border-color:#276749;color:#68d391}
+.btn.success:hover{background:#1a2e1a}
+.btn.purple{border-color:#553c9a;color:#b794f4}
+.btn.purple:hover{background:#1a1030}
+
+/* Chat input */
+.chat-input-row{display:flex;gap:8px}
+.chat-input{flex:1;background:#0d1117;border:1px solid #2d3748;border-radius:8px;padding:7px 12px;color:#e2e8f0;font-size:13px;font-family:'Sora',sans-serif;outline:none;transition:border-color .2s}
+.chat-input:focus{border-color:#4a5568}
+.chat-input::placeholder{color:#4a5568}
+
+/* WS indicator */
+.ws-bar{height:2px;width:100%;background:#1e2330;border-radius:1px;overflow:hidden;margin-top:4px}
+.ws-fill{height:100%;border-radius:1px;transition:width .3s}
+
+/* TPS color bands */
+.tps-good{background:#48bb78}
+.tps-ok{background:#ed8936}
+.tps-bad{background:#fc8181}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.header-left h1{font-size:20px;font-weight:600;letter-spacing:-.02em}
+.header-left p{font-size:12px;color:#4a5568;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* Mini stat grid */
+.mini-stat{background:#0d1117;border-radius:8px;padding:8px 10px}
+.mini-stat .label{font-size:10px;color:#4a5568;margin-bottom:3px}
+.mini-stat .val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
+
+/* WS config */
+.ws-config{background:#0d1117;border:1px solid #1e2330;border-radius:8px;padding:8px 12px;font-size:12px;color:#a0aec0;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ws-config input{background:#1e2330;border:1px solid #2d3748;border-radius:6px;padding:4px 8px;color:#e2e8f0;font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;width:220px}
+.ws-config button{background:#1e2330;border:1px solid #2d3748;border-radius:6px;color:#e2e8f0;padding:4px 10px;font-size:12px;cursor:pointer}
+.ws-config button:hover{background:#2d3748}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>MC Bot Dashboard</h1>
+      <p>Minecraft AFK Bot Monitor</p>
+    </div>
+    <div class="header-right">
+      <span class="badge badge-gray" id="connBadge"><span class="status-dot dot-offline" id="statusDot"></span>Disconnected</span>
+      <span class="badge badge-blue" id="uptimeBadge">Uptime: 00:00:00</span>
+      <span class="badge badge-gray" id="reconnectBadge">Reconnects: 0</span>
+    </div>
+  </div>
+
+  <!-- WS Config -->
+  <div class="ws-config">
+    <span style="color:#4a5568">Bot server:</span>
+    <input type="text" id="wsUrl" value="ws://localhost:3001" placeholder="ws://your-server:3001" />
+    <button onclick="connectWS()">Connect</button>
+    <span id="wsStatus" style="color:#4a5568">Not connected</span>
+  </div>
+
+  <!-- Top stats -->
+  <div class="grid4" style="margin-bottom:12px">
+    <div class="card">
+      <div class="card-title">Health</div>
+      <div class="stat" id="health">20<span class="stat-muted">/20</span></div>
+      <div class="bar-wrap"><div class="bar tps-good" id="healthBar" style="width:100%"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Food</div>
+      <div class="stat" id="food">20<span class="stat-muted">/20</span></div>
+      <div class="bar-wrap"><div class="bar" id="foodBar" style="width:100%;background:#ed8936"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Server TPS</div>
+      <div class="stat" id="tps">--</div>
+      <div class="bar-wrap"><div class="bar tps-good" id="tpsBar" style="width:100%"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Ping</div>
+      <div class="stat" id="ping">--<span class="stat-muted">ms</span></div>
+      <div class="bar-wrap"><div class="bar" id="pingBar" style="width:50%;background:#63b3ed"></div></div>
+    </div>
+  </div>
+
+  <!-- Position + Radar -->
+  <div class="grid2">
+    <div class="card">
+      <div class="section-head">Position & State</div>
+      <div class="coords">
+        <span class="coord-x">X <span id="posX">--</span></span>
+        <span class="coord-sep">/</span>
+        <span class="coord-y">Y <span id="posY">--</span></span>
+        <span class="coord-sep">/</span>
+        <span class="coord-z">Z <span id="posZ">--</span></span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <span class="badge badge-blue" id="dimBadge">Overworld</span>
+        <span class="badge badge-yellow" id="actionBadge">Idle</span>
+        <span class="badge badge-gray" id="sneakBadge">Standing</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div class="mini-stat"><div class="label">Pitch</div><div class="val" id="pitch">0.00°</div></div>
+        <div class="mini-stat"><div class="label">Yaw</div><div class="val" id="yaw">0.00°</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="mini-stat"><div class="label">Trail pts</div><div class="val" id="trailCount">0</div></div>
+        <div class="mini-stat"><div class="label">Bot name</div><div class="val" style="font-size:11px" id="botName">--</div></div>
+        <div class="mini-stat"><div class="label">Status</div><div class="val" style="font-size:11px" id="botStatus">offline</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:1rem">
+      <div class="section-head">Top-down radar
+        <span class="badge badge-gray" style="margin-left:auto;font-size:10px">±<span id="radarRange">40</span> blocks</span>
+      </div>
+      <div class="radar-wrap">
+        <div class="radar-inner">
+          <canvas id="radarCanvas"></canvas>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;justify-content:center">
+        <button class="btn" style="font-size:11px;padding:4px 10px" onclick="changeRange(-10)">- Range</button>
+        <button class="btn" style="font-size:11px;padding:4px 10px" onclick="changeRange(10)">+ Range</button>
+        <button class="btn" style="font-size:11px;padding:4px 10px" onclick="clearTrail()">Clear trail</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Log + Actions -->
+  <div class="grid2">
+    <div class="card">
+      <div class="section-head">
+        Event log
+        <button class="btn" style="font-size:10px;padding:3px 8px;margin-left:auto" onclick="clearLog()">Clear</button>
+      </div>
+      <div class="log-wrap" id="chatLog"></div>
+    </div>
+    <div class="card">
+      <div class="section-head">Action feed</div>
+      <div class="action-feed" id="actionFeed"></div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="card" style="margin-top:12px">
+    <div class="section-head">Controls</div>
+    <div class="ctrl-row">
+      <button class="btn success" onclick="sendCmd('reconnect')">Reconnect bot</button>
+      <button class="btn danger" onclick="sendCmd('stop')">Stop movement</button>
+      <button class="btn orange" onclick="sendCmd('burst')">Trigger burst</button>
+      <button class="btn" onclick="sendCmd('pos')">Log position</button>
+      <button class="btn purple" onclick="sendCmd('armor')">Equip armor</button>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chatInput" placeholder="Send chat message as bot..." />
+      <button class="btn success" onclick="sendChat()">Send</button>
+    </div>
+  </div>
+
+  <div class="dim" style="text-align:center;margin-top:12px;line-height:1.6">
+    Dashboard — set your bot server WebSocket URL above &nbsp;|&nbsp; Bot runs on Railway / Render / your PC
+  </div>
+</div>
+
+<script>
+// ─── STATE ──────────────────────────────────────────────
+let ws = null;
+let trail = [];
+let botPos = { x: 0, y: 64, z: 0 };
+let RANGE = 40;
+const TRAIL_MAX = 120;
+let startTime = Date.now();
+let wsConnected = false;
+let reconnectTimer = null;
+
+// ─── UPTIME ─────────────────────────────────────────────
+setInterval(() => {
+  const s = Math.floor((Date.now() - startTime) / 1000);
+  const h = String(Math.floor(s / 3600)).padStart(2, '0');
+  const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const sc = String(s % 60).padStart(2, '0');
+  document.getElementById('uptimeBadge').textContent = `Uptime: ${h}:${m}:${sc}`;
+}, 1000);
+
+// ─── RADAR ──────────────────────────────────────────────
+const canvas = document.getElementById('radarCanvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const w = canvas.parentElement.offsetWidth;
+  canvas.width = w;
+  canvas.height = w;
+}
+
+function drawRadar() {
+  resizeCanvas();
+  const W = canvas.width, H = canvas.height, cx = W / 2, cy = H / 2;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid rings
+  [1, 2, 3].forEach(r => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, cx * r / 3, 0, Math.PI * 2);
+    ctx.strokeStyle = '#1e2330';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // range label
+    ctx.fillStyle = '#2d3748';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${Math.round(RANGE * r / 3)}`, cx + 3, cy - cx * r / 3 + 10);
+  });
+
+  // Crosshair
+  ctx.strokeStyle = '#1e2330';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+
+  // Cardinals
+  ctx.fillStyle = '#4a5568';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('N', cx, 13);
+  ctx.fillText('S', cx, H - 4);
+  ctx.textAlign = 'left'; ctx.fillText('E', W - 18, cy + 4);
+  ctx.textAlign = 'right'; ctx.fillText('W', 18, cy + 4);
+
+  // Trail line
+  if (trail.length > 1) {
+    ctx.beginPath();
+    trail.forEach((p, i) => {
+      const tx = cx + (p.x - botPos.x) / RANGE * cx;
+      const ty = cy + (p.z - botPos.z) / RANGE * cy;
+      i === 0 ? ctx.moveTo(tx, ty) : ctx.lineTo(tx, ty);
+    });
+    ctx.strokeStyle = 'rgba(99,179,237,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Trail dots
+    trail.forEach((p, i) => {
+      const tx = cx + (p.x - botPos.x) / RANGE * cx;
+      const ty = cy + (p.z - botPos.z) / RANGE * cy;
+      const alpha = (i / trail.length) * 0.6;
+      ctx.beginPath();
+      ctx.arc(tx, ty, 2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(99,179,237,${alpha})`;
+      ctx.fill();
+    });
+  }
+
+  // Bot dot
+  ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+  ctx.fillStyle = wsConnected ? '#48bb78' : '#e53e3e';
+  ctx.fill();
+  // Pulse rings
+  [9, 14].forEach((r, i) => {
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = wsConnected ? `rgba(72,187,120,${0.3 - i * 0.1})` : `rgba(229,62,62,${0.2 - i * 0.05})`;
+    ctx.lineWidth = 1.5; ctx.stroke();
+  });
+
+  // Coords
+  ctx.fillStyle = '#4a5568';
+  ctx.font = '9px JetBrains Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText(`${Math.round(botPos.x)}, ${Math.round(botPos.z)}`, 6, H - 6);
+  document.getElementById('trailCount').textContent = trail.length;
+}
+
+setInterval(drawRadar, 100);
+
+// ─── WS CONNECTION ──────────────────────────────────────
+function connectWS() {
+  const url = document.getElementById('wsUrl').value.trim();
+  if (ws) { try { ws.close(); } catch (e) {} }
+
+  try {
+    ws = new WebSocket(url);
+
+    ws.onopen = () => {
+      wsConnected = true;
+      addLog('Connected to bot server', 'info');
+      setStatus('online');
+      document.getElementById('wsStatus').textContent = 'Connected';
+      document.getElementById('wsStatus').style.color = '#68d391';
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.stats) updateStats(d.stats);
+        if (d.statusUpdate) updateStats(d.statusUpdate);
+        if (d.log) addLog(d.log, d.logType || 'info');
+        if (d.action) addAction(d.action, d.icon, d.color);
+      } catch (err) {}
+    };
+
+    ws.onclose = () => {
+      wsConnected = false;
+      setStatus('offline');
+      document.getElementById('wsStatus').textContent = 'Disconnected — retrying...';
+      document.getElementById('wsStatus').style.color = '#fc8181';
+      addLog('Disconnected from bot server — reconnecting in 5s', 'err');
+      reconnectTimer = setTimeout(connectWS, 5000);
+    };
+
+    ws.onerror = () => {
+      document.getElementById('wsStatus').textContent = 'Connection failed';
+      document.getElementById('wsStatus').style.color = '#f6ad55';
+    };
+  } catch (err) {
+    addLog(`WS Error: ${err.message}`, 'err');
+  }
+}
+
+// ─── STATS UPDATE ───────────────────────────────────────
+function updateStats(s) {
+  if (s.pos) {
+    botPos = s.pos;
+    trail.push({ x: s.pos.x, z: s.pos.z });
+    if (trail.length > TRAIL_MAX) trail.shift();
+    document.getElementById('posX').textContent = Math.round(s.pos.x);
+    document.getElementById('posY').textContent = Math.round(s.pos.y);
+    document.getElementById('posZ').textContent = Math.round(s.pos.z);
+  }
+  if (s.health !== undefined) {
+    const h = Math.round(s.health);
+    document.getElementById('health').innerHTML = `${h}<span class="stat-muted">/20</span>`;
+    const hpct = h / 20 * 100;
+    const hbar = document.getElementById('healthBar');
+    hbar.style.width = hpct + '%';
+    hbar.className = `bar ${hpct > 60 ? 'tps-good' : hpct > 30 ? 'tps-ok' : 'tps-bad'}`;
+  }
+  if (s.food !== undefined) {
+    const f = Math.round(s.food);
+    document.getElementById('food').innerHTML = `${f}<span class="stat-muted">/20</span>`;
+    document.getElementById('foodBar').style.width = (f / 20 * 100) + '%';
+  }
+  if (s.pitch !== undefined) {
+    document.getElementById('pitch').textContent = (s.pitch * 180 / Math.PI).toFixed(1) + '°';
+    document.getElementById('yaw').textContent = ((s.yaw * 180 / Math.PI + 360) % 360).toFixed(1) + '°';
+  }
+  if (s.status) {
+    document.getElementById('botStatus').textContent = s.status;
+    setStatus(s.status);
+  }
+  if (s.reconnects !== undefined) {
+    document.getElementById('reconnectBadge').textContent = `Reconnects: ${s.reconnects}`;
+  }
+  if (s.uptime !== undefined) {
+    const sec = s.uptime;
+    const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+    const sc = String(sec % 60).padStart(2, '0');
+    document.getElementById('uptimeBadge').textContent = `Uptime: ${h}:${m}:${sc}`;
+  }
+}
+
+function setStatus(status) {
+  const dot = document.getElementById('statusDot');
+  const badge = document.getElementById('connBadge');
+  dot.className = 'status-dot';
+  badge.className = 'badge';
+  if (status === 'online') {
+    dot.classList.add('dot-online');
+    badge.classList.add('badge-green');
+    badge.innerHTML = '<span class="status-dot dot-online"></span>Online';
+  } else if (status === 'connecting') {
+    dot.classList.add('dot-connecting');
+    badge.classList.add('badge-yellow');
+    badge.innerHTML = '<span class="status-dot dot-connecting"></span>Connecting';
+  } else {
+    dot.classList.add('dot-offline');
+    badge.classList.add('badge-red');
+    badge.innerHTML = '<span class="status-dot dot-offline"></span>Offline';
+  }
+}
+
+// ─── LOG ────────────────────────────────────────────────
+function addLog(msg, type = 'info') {
+  const log = document.getElementById('chatLog');
+  const t = new Date().toLocaleTimeString('en', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const el = document.createElement('div');
+  el.className = `log-entry ${type}`;
+  el.innerHTML = `<span class="log-time">${t}</span><span>${escHtml(msg)}</span>`;
+  log.insertBefore(el, log.firstChild);
+  if (log.children.length > 100) log.removeChild(log.lastChild);
+}
+
+function clearLog() { document.getElementById('chatLog').innerHTML = ''; }
+
+// ─── ACTION FEED ────────────────────────────────────────
+function addAction(label, icon, color) {
+  document.getElementById('actionBadge').textContent = label;
+  setTimeout(() => document.getElementById('actionBadge').textContent = 'Idle', 2000);
+
+  const feed = document.getElementById('actionFeed');
+  const t = new Date().toLocaleTimeString('en', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const el = document.createElement('div');
+  el.className = 'action-item';
+  el.innerHTML = `<div class="action-icon" style="background:${color || '#1e2330'}">${icon || '•'}</div><span style="color:#a0aec0;flex:1;font-size:12px">${escHtml(label)}</span><span class="dim">${t}</span>`;
+  feed.insertBefore(el, feed.firstChild);
+  if (feed.children.length > 50) feed.removeChild(feed.lastChild);
+}
+
+// ─── COMMANDS ───────────────────────────────────────────
+function sendCmd(cmd) {
+  addLog(`Command: ${cmd}`, 'cmd');
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ cmd }));
+  else addLog('Not connected to bot server', 'err');
+}
+
+function sendChat() {
+  const inp = document.getElementById('chatInput');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  addLog(`Bot chat: ${msg}`, 'cmd');
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ cmd: 'chat', msg }));
+  inp.value = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement === document.getElementById('chatInput')) sendChat();
+});
+
+// ─── RADAR CONTROLS ─────────────────────────────────────
+function changeRange(delta) {
+  RANGE = Math.max(10, Math.min(200, RANGE + delta));
+  document.getElementById('radarRange').textContent = RANGE;
+}
+function clearTrail() { trail = []; }
+
+// ─── UTILS ──────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Auto-connect on load
+window.addEventListener('load', () => {
+  addLog('Dashboard loaded — enter your bot server WebSocket URL and click Connect', 'info');
+});
+</script>
+</body>
+</html>
