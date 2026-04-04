@@ -6,12 +6,12 @@ const http = require('http');
 
 // ─── CONFIG ────────────────────────────────────────────
 const CONFIG = {
-  host: 'your.server.ip',
-  port: 25565,
-  username: 'AFK_Bot',
-  version: '1.20.1',
+  host: '191.96.231.28',
+  port: 14787,
+  username: 'PussyHunter',
+  version: '1.21.10',
   auth: 'offline',       // 'microsoft' for premium accounts
-  owner: 'YourUsername', // your MC username for owner commands
+  owner: 'LordTheOG', // your MC username for owner commands
   wsPort: 3001,
   reconnectDelay: 5000,
 };
